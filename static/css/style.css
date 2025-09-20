@@ -1,0 +1,594 @@
+/* static/css/style.css */
+
+/* Custom font-family for a more futuristic look */
+body {
+    font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
+    /* Dark background matching the image */
+    background-color: #0a0e13; /* Very dark blue-black */
+    background-image: 
+        radial-gradient(ellipse at top, #0f1922 0%, transparent 70%),
+        radial-gradient(ellipse at bottom, #0a1118 0%, transparent 70%);
+    min-height: 100vh;
+}
+
+/* Basic styling for input fields to match the UI theme */
+input[type="text"] {
+    padding: 0.75rem 1rem;
+    border: 2px solid #1a4d4d; /* Dark teal border */
+    border-radius: 0.25rem; /* Slightly rounded corners */
+    background-color: #0d1a1a; /* Very dark teal background */
+    color: #4dd0d0; /* Bright cyan text */
+    transition: all 0.2s ease-in-out;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+input[type="text"]:focus {
+    outline: none;
+    border-color: #4dd0d0; /* Bright cyan border on focus */
+    box-shadow: 0 0 0 2px rgba(77, 208, 208, 0.2), inset 0 0 8px rgba(77, 208, 208, 0.1);
+    background-color: #0f1f1f;
+}
+
+/* Styling for buttons to match the UI elements in the image */
+button, label[for="loadConfigFile"] {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    user-select: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    position: relative;
+    overflow: hidden;
+    background-color: #0d1a1a;
+    border: 2px solid #1a4d4d;
+    color: #4dd0d0;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 0 20px rgba(77, 208, 208, 0.1);
+}
+
+button:hover, label[for="loadConfigFile"]:hover {
+    border-color: #4dd0d0;
+    background-color: #0f2626;
+    box-shadow: 
+        inset 0 0 20px rgba(77, 208, 208, 0.2),
+        0 0 15px rgba(77, 208, 208, 0.3);
+    transform: translateY(-1px);
+}
+
+button:active, label[for="loadConfigFile"]:active {
+    transform: translateY(0);
+    box-shadow: 
+        inset 0 0 20px rgba(77, 208, 208, 0.3),
+        0 0 5px rgba(77, 208, 208, 0.2);
+}
+
+/* Specific button styles with subtle color variations */
+#addAccountBtn {
+    border-color: #1a4d3d;
+    background-color: #0d1a15;
+}
+#addAccountBtn:hover {
+    border-color: #4dd0a0;
+    box-shadow: 
+        inset 0 0 20px rgba(77, 208, 160, 0.2),
+        0 0 15px rgba(77, 208, 160, 0.3);
+}
+
+#launchBtn {
+    border-color: #1a3d4d;
+    background-color: #0d151a;
+    font-size: 1rem;
+/*    padding: 0.75rem 2rem;*/
+}
+#launchBtn:hover {
+    border-color: #4da0d0;
+    box-shadow: 
+        inset 0 0 20px rgba(77, 160, 208, 0.2),
+        0 0 15px rgba(77, 160, 208, 0.3);
+}
+
+#saveConfigBtn {
+    border-color: #3d1a4d;
+    background-color: #150d1a;
+}
+#saveConfigBtn:hover {
+    border-color: #a04dd0;
+    box-shadow: 
+        inset 0 0 20px rgba(160, 77, 208, 0.2),
+        0 0 15px rgba(160, 77, 208, 0.3);
+}
+
+label[for="loadConfigFile"] {
+    border-color: #4d3d1a;
+    background-color: #1a150d;
+}
+label[for="loadConfigFile"]:hover {
+    border-color: #d0a04d;
+    box-shadow: 
+        inset 0 0 20px rgba(208, 160, 77, 0.2),
+        0 0 15px rgba(208, 160, 77, 0.3);
+}
+
+/* Message box styles */
+#messageBox {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    font-weight: 600;
+    border: 2px solid;
+    text-align: center;
+}
+
+.message-success {
+    background-color: #0d1a15;
+    color: #4dd0a0;
+    border-color: #1a4d3d;
+}
+
+.message-error {
+    background-color: #1a0d0d;
+    color: #d04d4d;
+    border-color: #4d1a1a;
+}
+
+.message-info {
+    background-color: #0d151a;
+    color: #4da0d0;
+    border-color: #1a3d4d;
+}
+
+.message-warning {
+    background-color: #1a150d;
+    color: #d0a04d;
+    border-color: #4d3d1a;
+}
+
+/* Main container styling */
+.container {
+    background-color: #0d1418;
+    color: #4dd0d0;
+    border-radius: 0.5rem;
+    box-shadow: 0 0 30px rgba(77, 208, 208, 0.1);
+    border: 2px solid #1a4d4d;
+}
+
+/* Account card styling to match the UI panels */
+.account-card {
+    background-color: #0a1118;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    transition: all 0.3s ease;
+    border: 2px solid #1a4d4d;
+    position: relative;
+    overflow: hidden;
+}
+
+.account-card.no-selected-char {
+    opacity: 0.6;
+    filter: grayscale(30%);
+}
+
+.account-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #4dd0d0, transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+}
+
+.account-card:hover::before {
+    transform: translateX(100%);
+}
+
+.account-card:hover {
+    border-color: #2a5d5d;
+    box-shadow: 0 0 20px rgba(77, 208, 208, 0.2);
+}
+
+/* Character item styling */
+.character-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background-color: #0d1a1a;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid #1a3333;
+    gap: 0.5rem;
+}
+
+.character-comment {
+    color: #2a5d5d;
+    font-size: 0.875rem;
+    cursor: pointer;
+    margin-left: 0.5rem;
+    opacity: 0.8;
+}
+
+.character-comment:empty::before {
+    content: "...";
+    opacity: 0.7;
+}
+
+.character-comment-input {
+    background: transparent;
+    border: none;
+    color: #2a5d5d;
+    font-size: 0.875rem;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+}
+
+.character-comment-input:focus {
+    outline: none;
+    color: #4dd0d0;
+}
+
+.character-item:hover {
+    border-color: #2a4d4d;
+    background-color: #0f1f1f;
+}
+
+.character-item.selected {
+    background-color: #0f2626;
+    border-color: #4dd0d0;
+    box-shadow: inset 0 0 10px rgba(77, 208, 208, 0.2);
+}
+
+.character-item input[type="checkbox"] {
+    margin-right: 0.75rem;
+    accent-color: #4dd0d0;
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+    filter: hue-rotate(180deg) brightness(1.5);
+}
+
+/* Modal overlay styling */
+.fixed {
+    position: fixed;
+}
+.inset-0 {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+}
+.z-50 {
+    z-index: 50;
+}
+
+/* Modal content styling */
+.bg-gray-800 {
+    background-color: #0d1418;
+    border: 2px solid #1a4d4d;
+}
+.text-gray-300 {
+    color: #4dd0d0;
+}
+.text-gray-500 {
+    color: #2a5d5d;
+}
+.bg-gray-700 {
+    background-color: #0a1118;
+}
+.cursor-not-allowed {
+    cursor: not-allowed;
+}
+
+/* Modal buttons */
+.bg-gray-600 {
+    background-color: #0d1a1a;
+    border: 2px solid #1a3333;
+    color: #4dd0d0;
+}
+.bg-gray-600:hover {
+    background-color: #0f1f1f;
+    border-color: #2a4d4d;
+}
+
+.bg-blue-600 {
+    background-color: #0d151a;
+    border: 2px solid #1a3d4d;
+    color: #4da0d0;
+}
+.bg-blue-600:hover {
+    background-color: #0f1f2a;
+    border-color: #4da0d0;
+    box-shadow:
+        inset 0 0 10px rgba(77, 160, 208, 0.2),
+        0 0 10px rgba(77, 160, 208, 0.3);
+}
+
+/* Password input in modal */
+#newPassword {
+    padding: 0.75rem 1rem;
+    border: 2px solid #1a4d4d;
+    border-radius: 0.25rem;
+    background-color: #0d1a1a;
+    color: #4dd0d0;
+    transition: all 0.2s ease-in-out;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+#newPassword:focus {
+    outline: none;
+    border-color: #4dd0d0;
+    box-shadow: 0 0 0 2px rgba(77, 208, 208, 0.2), inset 0 0 8px rgba(77, 208, 208, 0.1);
+    background-color: #0f1f1f;
+}
+
+/* Disabled password input styling */
+input[type="password"]:disabled {
+    background-color: #0a1118;
+    border-color: #1a3333;
+    color: #2a5d5d;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Headings and text styling */
+h1, h2, h3 {
+    color: #4dd0d0;
+    text-shadow: 0 0 10px rgba(77, 208, 208, 0.5);
+}
+
+h3.text-blue-200 {
+    color: #4dd0d0 !important;
+}
+
+/* Label styling */
+label {
+    color: #4dd0d0;
+    font-weight: 500;
+}
+
+/* Placeholder text */
+::placeholder {
+    color: #2a5d5d;
+    opacity: 1;
+}
+
+/* Scrollbar styling for webkit browsers */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0d1a1a;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #1a4d4d;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #2a5d5d;
+}
+
+/* Responsive adjustments */
+@media (min-width: 768px) {
+    #accountsContainer {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Additional futuristic effects */
+.container::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #4dd0d0, #1a4d4d, #4dd0d0);
+    border-radius: 0.5rem;
+    opacity: 0;
+    z-index: -1;
+    transition: opacity 0.3s ease;
+}
+
+.container:hover::before {
+    opacity: 0.3;
+}
+
+/* Override Tailwind classes for consistent theming */
+.text-blue-200 {
+    color: #4dd0d0 !important;
+}
+
+.text-gray-400 {
+    color: #2a5d5d !important;
+}
+
+.text-gray-100 {
+    color: #4dd0d0 !important;
+}
+
+.text-gray-300 {
+    color: #4dd0d0 !important;
+}
+
+.text-gray-500 {
+    color: #2a5d5d !important;
+}
+
+/* Account card internal button styling */
+.account-card .edit-password-btn {
+    background-color: #1a1a0d !important;
+    border: 2px solid #4d4d1a !important;
+    color: #d0d04d !important;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.3s ease;
+}
+
+.account-card .edit-password-btn:hover {
+    border-color: #d0d04d !important;
+    background-color: #2a2a0d !important;
+    box-shadow:
+        inset 0 0 10px rgba(208, 208, 77, 0.2),
+        0 0 10px rgba(208, 208, 77, 0.3);
+}
+
+.account-card .remove-account-btn {
+    background-color: #1a0d0d !important;
+    border: 2px solid #4d1a1a !important;
+    color: #d04d4d !important;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.85rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.3s ease;
+}
+
+.account-card .remove-account-btn:hover {
+    border-color: #d04d4d !important;
+    background-color: #2a0d0d !important;
+    box-shadow:
+        inset 0 0 10px rgba(208, 77, 77, 0.2),
+        0 0 10px rgba(208, 77, 77, 0.3);
+}
+
+.account-card .add-char-btn {
+    background-color: #0d1a15 !important;
+    border: 2px solid #1a4d3d !important;
+    color: #4dd0a0 !important;
+    font-size: 0.7rem;
+    padding: 0.25rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.3s ease;
+}
+
+.account-card .add-char-btn:hover {
+    border-color: #4dd0a0 !important;
+    background-color: #0f2620 !important;
+    box-shadow:
+        inset 0 0 10px rgba(77, 208, 160, 0.2),
+        0 0 10px rgba(77, 208, 160, 0.3);
+}
+
+.character-item .remove-char-btn {
+    background-color: #1a0d0d !important;
+    border: 2px solid #4d1a1a !important;
+    color: #d04d4d !important;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.character-item .remove-char-btn:hover {
+    border-color: #d04d4d !important;
+    background-color: #2a0d0d !important;
+    box-shadow:
+        inset 0 0 8px rgba(208, 77, 77, 0.2),
+        0 0 8px rgba(208, 77, 77, 0.3);
+}
+
+/* Override Tailwind background colors */
+.bg-yellow-600 {
+    background-color: #1a1a0d !important;
+}
+
+.bg-yellow-700 {
+    background-color: #2a2a0d !important;
+}
+
+.bg-red-600 {
+    background-color: #1a0d0d !important;
+}
+
+.bg-red-700 {
+    background-color: #2a0d0d !important;
+}
+
+.bg-red-500 {
+    background-color: #1a0d0d !important;
+}
+
+.bg-blue-500 {
+    background-color: #0d1a15 !important;
+}
+
+.bg-blue-600 {
+    background-color: #0d151a !important;
+}
+
+.bg-blue-700 {
+    background-color: #0f1f2a !important;
+}
+
+/* Ensure proper text color for all text elements */
+.account-card h3 {
+    color: #4dd0d0 !important;
+    text-shadow: 0 0 8px rgba(77, 208, 208, 0.3);
+}
+
+.account-card p {
+    color: #2a5d5d !important;
+}
+
+.character-item span {
+    color: #4dd0d0 !important;
+}
+
+/* Fix modal styling */
+.bg-gray-800 {
+    background-color: #0d1418 !important;
+    border: 2px solid #1a4d4d !important;
+}
+
+.bg-gray-700 {
+    background-color: #0a1118 !important;
+}
+
+.bg-gray-600 {
+    background-color: #0d1a1a !important;
+    border: 2px solid #1a3333 !important;
+    color: #4dd0d0 !important;
+}
+
+.bg-gray-600:hover {
+    background-color: #0f1f1f !important;
+    border-color: #2a4d4d !important;
+}
+
+/* Ensure all buttons have consistent styling */
+button {
+    font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
+}
+
+/* Fix spacing for account card buttons */
+.account-card .flex.space-x-2 > button {
+    margin-left: 0.5rem;
+}
+
+.account-card .flex.space-x-2 > button:first-child {
+    margin-left: 0;
+}

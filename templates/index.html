@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AO Launcher</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <!-- Tailwind CSS CDN for easy styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Inter font from Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="font-inter min-h-screen flex flex-col items-center p-3">
+    <div class="container mx-auto p-1 rounded-lg shadow-xl max-w-5xl w-full">
+
+        <!-- Configuration Paths Section -->
+        <div class="mb-2 p-0 rounded-lg">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-1">
+                <div>
+                    <label for="gameFolder" class="block text-sm font-bold mb-1">AO Game Folder:</label>
+                    <input type="text" id="gameFolder" placeholder="e.g., C:\Program Files (x86)\Steam\steamapps\common\Anarchy Online"
+                           class="shadow appearance-none border rounded-lg w-full py-2 px-2 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div>
+                    <label for="dllFolder" class="block text-sm font-bold mb-1">AOQuickLauncher.dll path:</label>
+                    <input type="text" id="dllFolder" placeholder="e.g., C:\repos\AOQuickLauncher"
+                           class="shadow appearance-none border rounded-lg w-full py-2 px-2 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+            </div>
+        </div>
+
+        <!-- Accounts and Characters Section -->
+        <div class="mb-2">
+            <div class="flex justify-between items-center mb-2 mx-1">
+                <h3 class="text-xl font-semibold">Accounts & Characters</h3>
+                <div class="flex items-center space-x-2">
+                    <label class="flex items-center space-x-2 cursor-pointer" title="When enabled, terminates running clients when appropriate">
+                        <input type="checkbox" id="autoCycleCheckbox" class="w-5 h-5 accent-[#4dd0d0]">
+                        <span class="text-sm font-semibold">Auto-cycle</span>
+                    </label>
+                    <button id="clearSelectionBtn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-2 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 uppercase">
+                        Uncheck All
+                    </button>
+                    <button id="addAccountBtn" class="font-bold py-2 px-2 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 uppercase">
+                        Add Account
+                    </button>
+                </div>
+            </div>
+            <div id="accountsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <!-- Accounts will be dynamically loaded here by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Action Buttons Section -->
+        <div class="flex flex-col sm:flex-row justify-center items-center mt-2 space-y-4 sm:space-y-0 sm:space-x-4">
+            <button id="launchBtn" class="font-bold py-2 px-8 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 w-full sm:w-auto uppercase">
+                Launch Selected
+            </button>
+            <button id="saveBatBtn" class="font-bold py-2 px-8 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 w-full sm:w-auto uppercase">
+                Save as .BAT File
+            </button>
+            <button id="saveConfigBtn" class="font-bold py-2 px-8 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 w-full sm:w-auto uppercase">
+                Save .JSON Config
+            </button>
+            <label for="loadConfigFile" class="font-bold py-2 px-8 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 w-full sm:w-auto text-center uppercase">
+                Load .JSON Config
+                <input type="file" id="loadConfigFile" accept=".json" class="hidden">
+            </label>
+        </div>
+
+        <!-- Status/Message Area -->
+        <div id="messageBox" class="mt-4 p-4 rounded-lg text-center hidden"></div>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+</body>
+</html>
