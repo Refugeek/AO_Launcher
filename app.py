@@ -155,7 +155,12 @@ def launch_game():
     characters_to_launch = data.get('characters')
 
     logger.info(f"Launch request received - Game folder: {game_folder}, DLL folder: {dll_folder}")
-    logger.info(f"Characters to launch: {characters_to_launch}")
+    # Do NOT log plaintext passwords. Log only non-sensitive metadata about characters.
+    try:
+        safe_chars = [{'accountName': c.get('accountName'), 'characterId': c.get('characterId')} for c in (characters_to_launch or [])]
+    except Exception:
+        safe_chars = 'unavailable'
+    logger.info(f"Characters to launch (passwords redacted): {safe_chars}")
 
     if not game_folder or not dll_folder or not characters_to_launch:
         logger.error("Missing required data in launch request")
@@ -203,7 +208,16 @@ def launch_game():
             str(char_id) # Ensure character ID is a string
         ]
 
-        logger.info(f"Executing command: {' '.join(command)}")
+        # Avoid logging plaintext passwords. Redact the password argument for safety.
+        try:
+            redacted_command = list(command)
+            # Expecting structure: [exe, dll_path, acc_name, password, char_id]
+            if len(redacted_command) > 3:
+                redacted_command[3] = '***REDACTED***'
+        except Exception:
+            redacted_command = ['[redacted]']
+
+        logger.info(f"Executing command: {' '.join(redacted_command)}")
         logger.info(f"Working directory: {dll_folder}")
 
         try:

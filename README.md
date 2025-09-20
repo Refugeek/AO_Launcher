@@ -1,6 +1,7 @@
 # AO Launcher
 
-A web-based launcher frontend for [AOQuickLauncher](https://gitlab.com/never-knows-best/aoquicklauncher) with some Anarchy Online window management capabilities.
+A vibecoded web-based launcher frontend for [AOQuickLauncher](https://gitlab.com/never-knows-best/aoquicklauncher) with some Anarchy Online window management capabilities.
+Use at your own risk. Credentials are not securely stored (but neither are they if you use a AOQuickLauncher .bat file). 
 
 ## Features
 
@@ -9,10 +10,7 @@ A web-based launcher frontend for [AOQuickLauncher](https://gitlab.com/never-kno
 - Bring existing game window to foreground (Windows only)
 - Save and load launcher configurations
 - Web-based interface accessible from any browser
-
-## New Feature: Window Focus
-
-The launcher now checks if a window with the title "Knows Modded AO#" is already running on your system. If found, it will bring that window to the foreground instead of launching a new instance.
+- sets focus to "Knows Modded AO#" for injection after launching game clients
 
 ## Installation
 
@@ -72,12 +70,6 @@ If you encounter issues installing pywin32, try:
    pip install pywin32-306-cp39-cp39-win_amd64.whl
    ```
    (Replace with the appropriate version for your Python installation)
-
-### Window Focus Not Working
-
-- This feature only works on Windows
-- Ensure the game window title is exactly "Knows Modded AO#"
-- The application needs appropriate permissions to interact with other windows
 
 ## Configuration
 
