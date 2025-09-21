@@ -55,6 +55,11 @@ If the game window "Knows Modded AO#" is already running, it will be brought to 
 - pywin32 (Windows only, for window management)
 - .NET runtime (for running AOQuickLauncher.dll)
 
+## Screenshot
+
+<img width="1396" height="801" alt="image" src="https://github.com/user-attachments/assets/ce7a1955-e925-43bd-9000-982e7dc0df06" />
+
+
 ## Troubleshooting
 
 ### pywin32 Installation Issues
