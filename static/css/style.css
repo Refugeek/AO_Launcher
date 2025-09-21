@@ -396,7 +396,7 @@ label {
     left: -2px;
     right: -2px;
     bottom: -2px;
-    background: linear-gradient(45deg, #4dd0d0, #1a4d4d, #4dd0d0);
+    background: linear-gradient(90deg, #111818, #2e7777, #111818);
     border-radius: 0.5rem;
     opacity: 0;
     z-index: -1;
