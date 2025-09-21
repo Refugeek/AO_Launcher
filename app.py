@@ -6,6 +6,10 @@ import subprocess
 import os
 import logging
 import platform
+import shutil
+from datetime import datetime
+from glob import glob
+
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS # Required for cross-origin requests if you run frontend from different origin
 
@@ -23,10 +27,155 @@ app = Flask(__name__)
 # Enable CORS for development. In a production scenario, you might want to restrict this.
 CORS(app)
 
+PREFERENCE_ITEMS = {
+    "charCfg": {"label": "Char.cfg", "path": "Char.cfg", "type": "file"},
+    "prefsXml": {"label": "Prefs.xml", "path": "Prefs.xml", "type": "file"},
+    "chatFolder": {"label": "Chat folder", "path": "Chat", "type": "folder"},
+    "containersBank": {"label": "Containers/Bank.xml", "path": os.path.join("Containers", "Bank.xml"), "type": "file"},
+    "containersInventory": {"label": "Containers/Inventory.xml", "path": os.path.join("Containers", "Inventory.xml"), "type": "file"},
+    "containersShortcutBars": {
+        "label": "Containers/ShortcutBar*.xml",
+        "path": os.path.join("Containers", "ShortcutBar*.xml"),
+        "type": "glob"
+    },
+    "dockAreasLayouts": {
+        "label": "DockAreas/DockArea*.xml",
+        "path": os.path.join("DockAreas", "DockArea*.xml"),
+        "type": "glob"
+    },
+    "dockAreasMap": {
+        "label": "DockAreas/PlanetMapViewConfig.xml",
+        "path": os.path.join("DockAreas", "PlanetMapViewConfig.xml"),
+        "type": "file"
+    },
+    "dockAreasRollup": {
+        "label": "DockAreas/RollupArea.xml",
+        "path": os.path.join("DockAreas", "RollupArea.xml"),
+        "type": "file"
+    },
+    "disabledTips": {"label": "DisabledTipsMap.xml", "path": "DisabledTipsMap.xml", "type": "file"},
+    "iconPositionsBin": {"label": "IconPositions.bin", "path": "IconPositions.bin", "type": "file"},
+    "ignoreListBin": {"label": "IgnoreList.bin", "path": "IgnoreList.bin", "type": "file"},
+    "referencesBin": {"label": "References.bin", "path": "References.bin", "type": "file"},
+    "textMacroBin": {"label": "TextMacro.bin", "path": "TextMacro.bin", "type": "file"}
+}
+
+
+def _ensure_char_folder_name(character_id: str) -> str:
+    """Return the directory name for a character ID (ensure it is prefixed with 'Char')."""
+    char_str = str(character_id)
+    if char_str.lower().startswith("char"):
+        return char_str
+    return f"Char{char_str}"
+
+
+def _get_character_prefs_path(base_path: str, account_name: str, character_id: str) -> str:
+    """Build the absolute path to a character's preference directory."""
+    if not base_path or not account_name or character_id is None:
+        return ""
+    folder_name = _ensure_char_folder_name(character_id)
+    return os.path.join(base_path, account_name, folder_name)
+
+
+def _backup_preference_item(target_dir: str, backup_root: str, item_def: dict) -> bool:
+    """Create a backup copy of the requested item if it exists in the target directory."""
+    if not backup_root:
+        return False
+
+    os.makedirs(backup_root, exist_ok=True)
+
+    if item_def["type"] == "file":
+        source_path = os.path.join(target_dir, item_def["path"])
+        if os.path.isfile(source_path):
+            backup_path = os.path.join(backup_root, item_def["path"])
+            os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+            shutil.copy2(source_path, backup_path)
+            return True
+        return False
+
+    if item_def["type"] == "folder":
+        source_dir = os.path.join(target_dir, item_def["path"])
+        if os.path.isdir(source_dir):
+            backup_dir = os.path.join(backup_root, item_def["path"])
+            if os.path.isdir(backup_dir):
+                shutil.rmtree(backup_dir)
+            shutil.copytree(source_dir, backup_dir)
+            return True
+        return False
+
+    if item_def["type"] == "glob":
+        pattern = os.path.join(target_dir, item_def["path"])
+        matches = [match for match in glob(pattern, recursive=True) if os.path.isfile(match)]
+        copied_any = False
+        for match in matches:
+            relative = os.path.relpath(match, target_dir)
+            backup_path = os.path.join(backup_root, relative)
+            os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+            shutil.copy2(match, backup_path)
+            copied_any = True
+        return copied_any
+
+    return False
+
+
+def _copy_preference_item(source_dir: str, target_dir: str, item_def: dict):
+    """Copy a single preference item from source to target. Returns (copied_paths, missing_paths)."""
+    copied_paths = []
+    missing_paths = []
+
+    if item_def["type"] == "file":
+        source_path = os.path.join(source_dir, item_def["path"])
+        if os.path.isfile(source_path):
+            dest_path = os.path.join(target_dir, item_def["path"])
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            shutil.copy2(source_path, dest_path)
+            copied_paths.append(item_def["path"])
+        else:
+            missing_paths.append(item_def["path"])
+        return copied_paths, missing_paths
+
+    if item_def["type"] == "folder":
+        source_path = os.path.join(source_dir, item_def["path"])
+        if os.path.isdir(source_path):
+            dest_path = os.path.join(target_dir, item_def["path"])
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            if os.path.isdir(dest_path):
+                shutil.rmtree(dest_path)
+            shutil.copytree(source_path, dest_path)
+            copied_paths.append(item_def["path"])
+        else:
+            missing_paths.append(item_def["path"])
+        return copied_paths, missing_paths
+
+    if item_def["type"] == "glob":
+        pattern = os.path.join(source_dir, item_def["path"])
+        matches = [match for match in glob(pattern, recursive=True) if os.path.isfile(match)]
+        if not matches:
+            missing_paths.append(item_def["path"])
+            return copied_paths, missing_paths
+
+        for match in matches:
+            relative = os.path.relpath(match, source_dir)
+            dest_path = os.path.join(target_dir, relative)
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            shutil.copy2(match, dest_path)
+            copied_paths.append(relative)
+
+        return copied_paths, missing_paths
+
+    missing_paths.append(item_def.get("path", "unknown"))
+    return copied_paths, missing_paths
+
 @app.route('/')
 def index():
     """Serves the main HTML page."""
     return render_template('index.html')
+
+
+@app.route('/preferences')
+def preferences():
+    """Serves the character preferences management page."""
+    return render_template('preferences.html')
 
 @app.route('/check_and_focus_window', methods=['POST'])
 def check_and_focus_window():
@@ -397,6 +546,333 @@ def close_running_instances():
             "status": "error",
             "message": f"Error closing game instances: {str(e)}"
         }), 500
+
+
+@app.route('/copy_preferences', methods=['POST'])
+def copy_preferences():
+    """Copy selected preference files from a source character to one or more targets."""
+    if platform.system() != 'Windows':
+        logger.warning("Preference copying requested on unsupported platform")
+        return jsonify({
+            "status": "unsupported",
+            "message": "Character preference copying is only supported on Windows"
+        }), 200
+
+    data = request.json or {}
+
+    base_path = (data.get('prefsBasePath') or '').strip()
+    source_info = data.get('source') or {}
+    targets_info = data.get('targets') or []
+    requested_items = data.get('items') or []
+    create_backup = bool(data.get('createBackup'))
+
+    if not base_path:
+        return jsonify({
+            "status": "error",
+            "message": "Preference base path is required"
+        }), 400
+
+    if not os.path.isdir(base_path):
+        return jsonify({
+            "status": "error",
+            "message": f"Preference base path does not exist: {base_path}"
+        }), 400
+
+    source_account = (source_info.get('accountName') or '').strip()
+    source_character_id = source_info.get('characterId')
+
+    if not source_account or source_character_id is None or source_character_id == '':
+        return jsonify({
+            "status": "error",
+            "message": "Source account and character must be specified"
+        }), 400
+
+    if not isinstance(targets_info, list) or len(targets_info) == 0:
+        return jsonify({
+            "status": "error",
+            "message": "At least one target character must be selected"
+        }), 400
+
+    selected_items = []
+    invalid_items = []
+    for item_id in requested_items:
+        item_def = PREFERENCE_ITEMS.get(item_id)
+        if item_def:
+            selected_items.append({**item_def, "id": item_id})
+        else:
+            invalid_items.append(item_id)
+
+    if not selected_items:
+        return jsonify({
+            "status": "error",
+            "message": "No valid preference items were requested for copying"
+        }), 400
+
+    source_dir = _get_character_prefs_path(base_path, source_account, source_character_id)
+    if not source_dir or not os.path.isdir(source_dir):
+        return jsonify({
+            "status": "error",
+            "message": f"Source character preferences not found at {source_dir or 'unknown path'}"
+        }), 400
+
+    logger.info(
+        "Copying preferences from %s/%s to %d target(s) with items %s",
+        source_account,
+        source_character_id,
+        len(targets_info),
+        [item['id'] for item in selected_items]
+    )
+
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    results = []
+    errors = []
+
+    source_identifier = (source_account.lower(), str(source_character_id))
+
+    for target in targets_info:
+        target_account = (target.get('accountName') or '').strip()
+        target_character_id = target.get('characterId')
+
+        if not target_account or target_character_id is None or target_character_id == '':
+            error_msg = "Target account and character must be provided"
+            errors.append(error_msg)
+            logger.error(error_msg)
+            continue
+
+        target_identifier = (target_account.lower(), str(target_character_id))
+        if target_identifier == source_identifier:
+            logger.info("Skipping target identical to source: %s/%s", target_account, target_character_id)
+            continue
+
+        target_dir = _get_character_prefs_path(base_path, target_account, target_character_id)
+        if not target_dir:
+            error_msg = f"Unable to determine target directory for {target_account}/{target_character_id}"
+            errors.append(error_msg)
+            logger.error(error_msg)
+            continue
+
+        os.makedirs(target_dir, exist_ok=True)
+
+        backup_dir = None
+        backed_up_items = []
+        if create_backup:
+            backup_dir = os.path.join(target_dir, f"backup_{timestamp}")
+            for item in selected_items:
+                try:
+                    if _backup_preference_item(target_dir, backup_dir, item):
+                        backed_up_items.append(item["label"])
+                except Exception as backup_error:
+                    logger.error(
+                        "Failed to back up %s for %s/%s: %s",
+                        item["label"],
+                        target_account,
+                        target_character_id,
+                        backup_error,
+                        exc_info=True
+                    )
+                    errors.append(
+                        f"Backup failed for {target_account}/{target_character_id} item {item['label']}: {backup_error}"
+                    )
+
+        copied_details = []
+        missing_details = []
+
+        for item in selected_items:
+            try:
+                copied_paths, missing_paths = _copy_preference_item(source_dir, target_dir, item)
+                if copied_paths:
+                    copied_details.append({
+                        "itemId": item["id"],
+                        "label": item["label"],
+                        "paths": copied_paths
+                    })
+                if missing_paths:
+                    missing_details.append({
+                        "itemId": item["id"],
+                        "label": item["label"],
+                        "paths": missing_paths
+                    })
+            except Exception as copy_error:
+                logger.error(
+                    "Failed to copy %s from %s/%s to %s/%s: %s",
+                    item["label"],
+                    source_account,
+                    source_character_id,
+                    target_account,
+                    target_character_id,
+                    copy_error,
+                    exc_info=True
+                )
+                errors.append(
+                    f"Copy failed for {target_account}/{target_character_id} item {item['label']}: {copy_error}"
+                )
+
+        results.append({
+            "accountName": target_account,
+            "characterId": str(target_character_id),
+            "copied": copied_details,
+            "missing": missing_details,
+            "backupDirectory": backup_dir if backed_up_items else None,
+            "backedUpItems": backed_up_items
+        })
+
+    if not results and errors:
+        return jsonify({
+            "status": "error",
+            "message": "Preference copy failed for all targets",
+            "errors": errors,
+            "invalidItems": invalid_items
+        }), 500
+
+    status = "success" if not errors else "partial_success"
+    message = f"Copied preferences to {len(results)} character(s)."
+    if errors:
+        message += " Some items encountered issues."
+
+    return jsonify({
+        "status": status,
+        "message": message,
+        "results": results,
+        "errors": errors,
+        "invalidItems": invalid_items
+    }), 200
+
+
+@app.route('/delete_shortcutbar_settings', methods=['POST'])
+def delete_shortcutbar_settings():
+    """Delete shortcutbar settings for selected characters."""
+    if platform.system() != 'Windows':
+        logger.warning("Shortcutbar deletion requested on unsupported platform")
+        return jsonify({
+            "status": "unsupported",
+            "message": "Shortcutbar deletion is only supported on Windows"
+        }), 200
+
+    data = request.json or {}
+
+    base_path = (data.get('prefsBasePath') or '').strip()
+    targets_info = data.get('targets') or []
+    create_backup = bool(data.get('createBackup'))
+
+    if not base_path:
+        return jsonify({
+            "status": "error",
+            "message": "Preference base path is required"
+        }), 400
+
+    if not os.path.isdir(base_path):
+        return jsonify({
+            "status": "error",
+            "message": f"Preference base path does not exist: {base_path}"
+        }), 400
+
+    if not isinstance(targets_info, list) or len(targets_info) == 0:
+        return jsonify({
+            "status": "error",
+            "message": "At least one character must be selected"
+        }), 400
+
+    logger.info(
+        "Deleting shortcutbar settings for %d target(s)",
+        len(targets_info)
+    )
+
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    results = []
+    errors = []
+
+    for target in targets_info:
+        target_account = (target.get('accountName') or '').strip()
+        target_character_id = target.get('characterId')
+
+        if not target_account or target_character_id is None or target_character_id == '':
+            error_msg = "Target account and character must be provided"
+            errors.append(error_msg)
+            logger.error(error_msg)
+            continue
+
+        target_dir = _get_character_prefs_path(base_path, target_account, target_character_id)
+        if not target_dir:
+            error_msg = f"Unable to determine target directory for {target_account}/{target_character_id}"
+            errors.append(error_msg)
+            logger.error(error_msg)
+            continue
+
+        if not os.path.isdir(target_dir):
+            error_msg = f"Target character preferences not found at {target_dir}"
+            errors.append(error_msg)
+            logger.error(error_msg)
+            continue
+
+        # Setup backup if requested
+        backup_dir = None
+        if create_backup:
+            backup_root = os.path.join(
+                target_dir,
+                f"Backup_{timestamp}"
+            )
+            os.makedirs(backup_root, exist_ok=True)
+            backup_dir = backup_root
+
+        try:
+            # Find all shortcutbar files
+            shortcut_path_pattern = os.path.join(target_dir, "Containers", "ShortcutBar*.xml")
+            shortcut_files = glob(shortcut_path_pattern)
+            
+            if not shortcut_files:
+                logger.info(f"No shortcutbar files found for {target_account}/{target_character_id}")
+                results.append({
+                    "accountName": target_account,
+                    "characterId": target_character_id,
+                    "status": "success",
+                    "message": "No shortcutbar files found"
+                })
+                continue
+                
+            for file_path in shortcut_files:
+                # Backup file if requested
+                if backup_dir:
+                    rel_path = os.path.relpath(file_path, target_dir)
+                    backup_path = os.path.join(backup_dir, rel_path)
+                    os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+                    shutil.copy2(file_path, backup_path)
+                    
+                # Delete the file
+                os.remove(file_path)
+                
+            results.append({
+                "accountName": target_account,
+                "characterId": target_character_id,
+                "status": "success",
+                "message": f"Deleted {len(shortcut_files)} shortcutbar files" + 
+                          (f" with backup in {os.path.basename(backup_dir)}" if backup_dir else "")
+            })
+            
+        except Exception as e:
+            error_msg = f"Error deleting shortcutbar settings for {target_account}/{target_character_id}: {str(e)}"
+            errors.append(error_msg)
+            logger.exception(error_msg)
+            results.append({
+                "accountName": target_account,
+                "characterId": target_character_id,
+                "status": "error",
+                "message": f"Error: {str(e)}"
+            })
+
+    status = "success"
+    message = f"Successfully deleted shortcutbar settings for {len(results)} characters"
+    
+    if len(errors) > 0:
+        status = "partial_success" if len(results) > 0 else "error"
+        message = f"Encountered {len(errors)} errors while deleting shortcutbar settings"
+
+    return jsonify({
+        "status": status,
+        "message": message,
+        "results": results,
+        "errors": errors
+    })
+
 
 if __name__ == '__main__':
     # Run the Flask app on all interfaces so it's reachable externally.
