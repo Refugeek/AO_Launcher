@@ -41,8 +41,8 @@ const PREFERENCE_ITEMS = [
         id: 'containersShortcutBars',
         label: 'Containers/ShortcutBar*.xml',
         description: 'Shortcut bar positions and contents. Copy with caution when professions differ.',
-        defaultChecked: true,
-        category: 'recommended'
+        defaultChecked: false,
+        category: 'optional'
     },
     {
         id: 'dockAreasLayouts',
@@ -55,29 +55,45 @@ const PREFERENCE_ITEMS = [
         id: 'dockAreasMap',
         label: 'DockAreas/PlanetMapViewConfig.xml',
         description: 'Planet map configuration including window placement and zoom state.',
-        defaultChecked: true,
-        category: 'recommended'
+        defaultChecked: true
     },
     {
         id: 'dockAreasRollup',
         label: 'DockAreas/RollupArea.xml',
         description: 'Roll-up window states—what is expanded or collapsed.',
         defaultChecked: true,
-        category: 'recommended'
+        category: 'optional'
     },
     {
         id: 'disabledTips',
         label: 'DisabledTipsMap.xml',
         description: 'Tracks which tutorial tips were dismissed. Optional quality-of-life preference.',
-        defaultChecked: false,
+        defaultChecked: true,
         category: 'optional'
     },
     {
-        id: 'binFiles',
-        label: '*.bin files',
-        description: 'Binary preference data such as icon positions, ignore lists, macros, and references.',
-        defaultChecked: false,
-        category: 'optional'
+        id: 'iconPositionsBin',
+        label: 'IconPositions.bin',
+        description: 'Binary icon placement data (hotbars, HUD icons). Copy if you want identical positioning.',
+        defaultChecked: true
+    },
+    {
+        id: 'ignoreListBin',
+        label: 'IgnoreList.bin',
+        description: 'Ignored players list. Optional and potentially sensitive.',
+        defaultChecked: true
+    },
+    {
+        id: 'referencesBin',
+        label: 'References.bin',
+        description: 'Internal reference cache. Usually safe to copy but optional.',
+        defaultChecked: false
+    },
+    {
+        id: 'textMacroBin',
+        label: 'TextMacro.bin',
+        description: 'Chat macros and quick text bindings.',
+        defaultChecked: false
     }
 ];
 
@@ -218,12 +234,15 @@ function renderPreferenceItems() {
         labelSpan.className = 'text-cyan-100 font-semibold';
         labelSpan.textContent = item.label;
 
-        const badge = document.createElement('span');
-        badge.className = `preference-badge ${item.category === 'optional' ? 'preference-badge-optional' : 'preference-badge-recommended'}`;
-        badge.textContent = item.category === 'optional' ? 'Optional' : 'Recommended';
-
         labelLine.appendChild(labelSpan);
-        labelLine.appendChild(badge);
+        
+        // Only add category badge if category is defined
+        if (item.category) {
+            const badge = document.createElement('span');
+            badge.className = `preference-badge ${item.category === 'optional' ? 'preference-badge-optional' : 'preference-badge-recommended'}`;
+            badge.textContent = item.category === 'optional' ? 'Optional' : 'Recommended';
+            labelLine.appendChild(badge);
+        }
 
         const description = document.createElement('span');
         description.className = 'text-xs opacity-80';

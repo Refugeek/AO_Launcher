@@ -54,7 +54,10 @@ PREFERENCE_ITEMS = {
         "type": "file"
     },
     "disabledTips": {"label": "DisabledTipsMap.xml", "path": "DisabledTipsMap.xml", "type": "file"},
-    "binFiles": {"label": "*.bin files", "path": "*.bin", "type": "glob"}
+    "iconPositionsBin": {"label": "IconPositions.bin", "path": "IconPositions.bin", "type": "file"},
+    "ignoreListBin": {"label": "IgnoreList.bin", "path": "IgnoreList.bin", "type": "file"},
+    "referencesBin": {"label": "References.bin", "path": "References.bin", "type": "file"},
+    "textMacroBin": {"label": "TextMacro.bin", "path": "TextMacro.bin", "type": "file"}
 }
 
 
