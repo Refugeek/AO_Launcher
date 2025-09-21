@@ -11,6 +11,7 @@ Use at your own risk. Credentials are not securely stored (but neither are they 
 - Save and load launcher configurations
 - Web-based interface accessible from any browser
 - sets focus to "Knows Modded AO#" for injection after launching game clients
+- Dedicated preference copier to clone character UI files with optional backups
 
 ## Installation
 

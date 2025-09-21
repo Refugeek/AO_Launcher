@@ -6,6 +6,9 @@ import subprocess
 import os
 import logging
 import platform
+import shutil
+import glob
+from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS # Required for cross-origin requests if you run frontend from different origin
 
@@ -27,6 +30,11 @@ CORS(app)
 def index():
     """Serves the main HTML page."""
     return render_template('index.html')
+
+@app.route('/prefs')
+def prefs():
+    """Serves the preference copier page."""
+    return render_template('prefs.html')
 
 @app.route('/check_and_focus_window', methods=['POST'])
 def check_and_focus_window():
@@ -397,6 +405,232 @@ def close_running_instances():
             "status": "error",
             "message": f"Error closing game instances: {str(e)}"
         }), 500
+
+@app.route('/api/copy_preferences', methods=['POST'])
+def copy_preferences():
+    """Copy selected preference files from a source character to multiple targets."""
+    if platform.system() != 'Windows':
+        logger.warning("Preference copying is only supported on Windows")
+        return jsonify({
+            "status": "unsupported",
+            "message": "Preference copying is only supported on Windows"
+        }), 200
+
+    data = request.get_json(silent=True) or {}
+
+    prefs_root = (data.get('prefsRoot') or '').strip()
+    source = data.get('source') or {}
+    targets = data.get('targets') or []
+    items = data.get('items') or []
+    make_backup = bool(data.get('makeBackup'))
+
+    if not prefs_root:
+        return jsonify({
+            "status": "error",
+            "message": "Preferences root path is required."
+        }), 400
+
+    if not os.path.isdir(prefs_root):
+        return jsonify({
+            "status": "error",
+            "message": f"Preferences root not found: {prefs_root}"
+        }), 400
+
+    source_account = source.get('accountName')
+    source_char_id = source.get('characterId')
+
+    if not source_account or source_char_id is None:
+        return jsonify({
+            "status": "error",
+            "message": "A source character must be provided."
+        }), 400
+
+    try:
+        source_char_folder = f"Char{int(source_char_id)}"
+    except (TypeError, ValueError):
+        source_char_folder = f"Char{source_char_id}"
+
+    source_dir = os.path.join(prefs_root, source_account, source_char_folder)
+
+    if not os.path.isdir(source_dir):
+        return jsonify({
+            "status": "error",
+            "message": f"Source preferences folder not found: {source_dir}"
+        }), 400
+
+    if not items:
+        return jsonify({
+            "status": "error",
+            "message": "No files or folders selected for copy."
+        }), 400
+
+    if not targets:
+        return jsonify({
+            "status": "error",
+            "message": "No target characters were provided."
+        }), 400
+
+    def resolve_character_dir(account_name, char_id):
+        try:
+            char_folder = f"Char{int(char_id)}"
+        except (TypeError, ValueError):
+            char_folder = f"Char{char_id}"
+        return os.path.join(prefs_root, account_name, char_folder)
+
+    logger.info(
+        "Copying preferences from %s/%s to %d target(s). Backup=%s",
+        source_account,
+        source_char_folder,
+        len(targets),
+        make_backup
+    )
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    overall_results = []
+    encountered_errors = False
+    encountered_warnings = False
+
+    for target in targets:
+        account_name = target.get('accountName')
+        char_id = target.get('characterId')
+        target_result = {
+            'account': account_name,
+            'characterId': char_id,
+            'copied': [],
+            'warnings': [],
+            'errors': [],
+            'backups': []
+        }
+
+        if not account_name or char_id is None:
+            target_result['errors'].append('Incomplete target character data.')
+            encountered_errors = True
+            overall_results.append(target_result)
+            continue
+
+        if account_name == source_account and str(char_id) == str(source_char_id):
+            target_result['warnings'].append('Skipped source character; source and target are identical.')
+            encountered_warnings = True
+            overall_results.append(target_result)
+            continue
+
+        target_dir = resolve_character_dir(account_name, char_id)
+
+        if not os.path.isdir(target_dir):
+            target_result['errors'].append(f"Target preferences folder not found: {target_dir}")
+            encountered_errors = True
+            overall_results.append(target_result)
+            continue
+
+        backup_root = None
+        if make_backup:
+            backup_root = os.path.join(target_dir, 'Backups', f"prefs_copy_{timestamp}")
+            os.makedirs(backup_root, exist_ok=True)
+
+        for item in items:
+            item_path = item.get('path')
+            item_type = item.get('type')
+            item_label = item.get('label', item_path)
+
+            if not item_path or not item_type:
+                target_result['warnings'].append('Skipping an item with missing path or type.')
+                encountered_warnings = True
+                continue
+
+            if item_type == 'file':
+                source_file = os.path.join(source_dir, item_path)
+                dest_file = os.path.join(target_dir, item_path)
+
+                if not os.path.isfile(source_file):
+                    target_result['warnings'].append(f"Source file not found for {item_label} ({item_path})")
+                    encountered_warnings = True
+                    continue
+
+                if make_backup and os.path.exists(dest_file):
+                    rel = os.path.relpath(dest_file, target_dir)
+                    backup_path = os.path.join(backup_root, rel)
+                    os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+                    shutil.copy2(dest_file, backup_path)
+                    target_result['backups'].append(rel)
+
+                dest_parent = os.path.dirname(dest_file)
+                if dest_parent:
+                    os.makedirs(dest_parent, exist_ok=True)
+                shutil.copy2(source_file, dest_file)
+                target_result['copied'].append(item_path)
+
+            elif item_type == 'directory':
+                source_path = os.path.join(source_dir, item_path)
+                dest_path = os.path.join(target_dir, item_path)
+
+                if not os.path.isdir(source_path):
+                    target_result['warnings'].append(f"Source directory not found for {item_label} ({item_path})")
+                    encountered_warnings = True
+                    continue
+
+                if make_backup and os.path.isdir(dest_path):
+                    backup_path = os.path.join(backup_root, item_path)
+                    if os.path.exists(backup_path):
+                        shutil.rmtree(backup_path)
+                    shutil.copytree(dest_path, backup_path)
+                    target_result['backups'].append(f"{item_path}/")
+
+                os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+                shutil.copytree(source_path, dest_path, dirs_exist_ok=True)
+                target_result['copied'].append(f"{item_path}/")
+
+            elif item_type == 'glob':
+                pattern = os.path.join(source_dir, item_path)
+                matches = [match for match in glob.glob(pattern, recursive=True) if os.path.isfile(match)]
+
+                if not matches:
+                    target_result['warnings'].append(f"No files matched pattern for {item_label} ({item_path})")
+                    encountered_warnings = True
+                    continue
+
+                for match in matches:
+                    relative = os.path.relpath(match, source_dir)
+                    dest_file = os.path.join(target_dir, relative)
+
+                    if make_backup and os.path.exists(dest_file):
+                        backup_path = os.path.join(backup_root, relative)
+                        os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+                        shutil.copy2(dest_file, backup_path)
+                        target_result['backups'].append(relative)
+
+                    dest_parent = os.path.dirname(dest_file)
+                    if dest_parent:
+                        os.makedirs(dest_parent, exist_ok=True)
+                    shutil.copy2(match, dest_file)
+                    target_result['copied'].append(relative)
+
+            else:
+                target_result['warnings'].append(f"Unsupported item type {item_type} for {item_label}")
+                encountered_warnings = True
+
+        overall_results.append(target_result)
+
+    if any(result['errors'] for result in overall_results):
+        encountered_errors = True
+
+    status = 'success'
+    message = 'Preferences copied successfully.'
+
+    if encountered_errors and encountered_warnings:
+        status = 'partial_success'
+        message = 'Completed with errors and warnings for some targets.'
+    elif encountered_errors:
+        status = 'partial_success'
+        message = 'Completed with errors for some targets.'
+    elif encountered_warnings:
+        status = 'success'
+        message = 'Completed with warnings. Review details before launching the game.'
+
+    return jsonify({
+        'status': status,
+        'message': message,
+        'results': overall_results
+    }), 200
 
 if __name__ == '__main__':
     # Run the Flask app on all interfaces so it's reachable externally.

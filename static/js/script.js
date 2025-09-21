@@ -8,7 +8,8 @@ let appSettings = {
     gameFolder: "", // Default empty, user will input
     dllFolder: "",  // Default empty, user will input
     accounts: [],   // Array to store account objects
-    autoCycle: false // Whether to auto-cycle characters
+    autoCycle: false, // Whether to auto-cycle characters
+    prefsRoot: ""   // Base path for AO preference folders
 };
 
 // --- DOM Elements ---
@@ -59,6 +60,7 @@ function loadSettingsFromLocalStorage() {
             appSettings.gameFolder = parsedSettings.gameFolder || "";
             appSettings.dllFolder = parsedSettings.dllFolder || "";
             appSettings.autoCycle = parsedSettings.autoCycle || false;
+            appSettings.prefsRoot = parsedSettings.prefsRoot || "";
             if (Array.isArray(parsedSettings.accounts)) {
                 // Data migration: ensure character IDs are numbers for backwards compatibility
                 parsedSettings.accounts.forEach(account => {
