@@ -3,14 +3,15 @@
 A vibecoded web-based launcher frontend for [AOQuickLauncher](https://gitlab.com/never-knows-best/aoquicklauncher) with some Anarchy Online window management capabilities.
 Use at your own risk. Credentials are not securely stored (but neither are they if you use a AOQuickLauncher .bat file). 
 
+The latest version includes a feature to copy-paste preference folders across characters (I felt this made sense, since all accounts, character names and ID numbers are saved in the interface and can be reused for this purpose).
+
 ## Features
 
 - Launch multiple game instances with different characters
-- Automatically check if the game is already running
-- Bring existing game window to foreground (Windows only)
+- Automatically check and optionally close running instances
 - Save and load launcher configurations
 - Web-based interface accessible from any browser
-- sets focus to "Knows Modded AO#" for injection after launching game clients
+- Option to copy preferences folders between characters
 
 ## Installation
 
