@@ -116,7 +116,8 @@ label[for="loadConfigFile"]:hover {
 }
 
 /* Message box styles */
-#messageBox {
+#messageBox,
+#prefsMessageBox {
     margin-top: 1.5rem;
     padding: 1rem;
     border-radius: 0.25rem;

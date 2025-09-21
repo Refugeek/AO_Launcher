@@ -6,6 +6,9 @@ import subprocess
 import os
 import logging
 import platform
+import shutil
+from datetime import datetime
+from glob import glob
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS # Required for cross-origin requests if you run frontend from different origin
 
@@ -23,10 +26,150 @@ app = Flask(__name__)
 # Enable CORS for development. In a production scenario, you might want to restrict this.
 CORS(app)
 
+PREFERENCE_ITEMS = [
+    {
+        "id": "char_cfg",
+        "label": "Char.cfg",
+        "pattern": "Char.cfg",
+        "type": "file",
+        "description": "Core character configuration metadata that uniquely identifies the character and stores last session details.",
+        "recommended": True,
+    },
+    {
+        "id": "prefs_xml",
+        "label": "Prefs.xml",
+        "pattern": "Prefs.xml",
+        "type": "file",
+        "description": "Primary UI layout file containing window positions, filters, and many interface toggles.",
+        "recommended": True,
+    },
+    {
+        "id": "chat_folder",
+        "label": "Chat/",
+        "pattern": "Chat",
+        "type": "directory",
+        "description": "Chat window definitions covering tabs, colors, filters, and positions for each chat frame.",
+        "recommended": True,
+    },
+    {
+        "id": "containers_bank",
+        "label": "Containers/Bank.xml",
+        "pattern": os.path.join("Containers", "Bank.xml"),
+        "type": "file",
+        "description": "Bank window layout data that preserves backpack ordering and placement.",
+        "recommended": True,
+    },
+    {
+        "id": "containers_inventory",
+        "label": "Containers/Inventory.xml",
+        "pattern": os.path.join("Containers", "Inventory.xml"),
+        "type": "file",
+        "description": "Inventory window organization describing how sections and items are displayed.",
+        "recommended": True,
+    },
+    {
+        "id": "containers_shortcut",
+        "label": "Containers/ShortcutBar*.xml",
+        "pattern": os.path.join("Containers", "ShortcutBar*.xml"),
+        "type": "glob",
+        "description": "Hotbar layouts and positions. Copy to keep shortcut placement (verify profession-specific actions afterwards).",
+        "recommended": True,
+    },
+    {
+        "id": "dockareas_files",
+        "label": "DockAreas/DockArea*.xml",
+        "pattern": os.path.join("DockAreas", "DockArea*.xml"),
+        "type": "glob",
+        "description": "Docking area layout files that anchor HUD elements and windows to the screen edges.",
+        "recommended": True,
+    },
+    {
+        "id": "dockareas_planet",
+        "label": "DockAreas/PlanetMapViewConfig.xml",
+        "pattern": os.path.join("DockAreas", "PlanetMapViewConfig.xml"),
+        "type": "file",
+        "description": "Planet map window state, including zoom level and placement.",
+        "recommended": True,
+    },
+    {
+        "id": "dockareas_rollup",
+        "label": "DockAreas/RollupArea.xml",
+        "pattern": os.path.join("DockAreas", "RollupArea.xml"),
+        "type": "file",
+        "description": "Rollup interface settings preserving which mini-windows are expanded and their order.",
+        "recommended": True,
+    },
+    {
+        "id": "disabled_tips",
+        "label": "DisabledTipsMap.xml",
+        "pattern": "DisabledTipsMap.xml",
+        "type": "file",
+        "description": "Dismissed tutorial tip tracker. Copy to avoid seeing already-dismissed tips again.",
+        "recommended": False,
+    },
+    {
+        "id": "binary_blobs",
+        "label": "*.bin",
+        "pattern": "*.bin",
+        "type": "glob",
+        "description": "Binary preference blobs (icon positions, ignore list, macros). Copy if you want these social/UI extras.",
+        "recommended": False,
+    },
+]
+
+PREFERENCE_ITEM_MAP = {item["id"]: item for item in PREFERENCE_ITEMS}
+
+
+def _character_folder_name(character_id):
+    """Return the folder name for a given character id."""
+    if character_id is None:
+        return None
+    char_str = str(character_id)
+    return char_str if char_str.lower().startswith("char") else f"Char{char_str}"
+
+
+def _ensure_parent_directory(path, fallback_root=None):
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    elif fallback_root:
+        os.makedirs(fallback_root, exist_ok=True)
+
+
+def _backup_existing_path(dest_path, backup_root, target_root):
+    if not backup_root or not os.path.exists(dest_path):
+        return None
+
+    relative = os.path.relpath(dest_path, target_root)
+    backup_path = os.path.join(backup_root, relative)
+
+    if os.path.isdir(dest_path):
+        os.makedirs(backup_path, exist_ok=True)
+        shutil.copytree(dest_path, backup_path, dirs_exist_ok=True)
+    else:
+        _ensure_parent_directory(backup_path, fallback_root=backup_root)
+        shutil.copy2(dest_path, backup_path)
+
+    return relative
+
+
+def _copy_entry(src_path, dest_path):
+    if os.path.isdir(src_path):
+        shutil.copytree(src_path, dest_path, dirs_exist_ok=True)
+    else:
+        _ensure_parent_directory(dest_path)
+        shutil.copy2(src_path, dest_path)
+
 @app.route('/')
 def index():
     """Serves the main HTML page."""
     return render_template('index.html')
+
+
+@app.route('/preferences')
+def preferences():
+    """Serves the preference copy UI."""
+    return render_template('preferences.html', preference_items=PREFERENCE_ITEMS)
 
 @app.route('/check_and_focus_window', methods=['POST'])
 def check_and_focus_window():
@@ -397,6 +540,198 @@ def close_running_instances():
             "status": "error",
             "message": f"Error closing game instances: {str(e)}"
         }), 500
+
+
+@app.route('/copy_preferences', methods=['POST'])
+def copy_preferences():
+    """Copy preference files from one character to others."""
+    if platform.system() != 'Windows':
+        return jsonify({
+            "status": "unsupported",
+            "message": "Preference copying is only supported on Windows.",
+        }), 400
+
+    data = request.json or {}
+    prefs_root = (data.get('prefsRoot') or '').strip()
+    source_account = (data.get('sourceAccount') or '').strip()
+    source_character_id = data.get('sourceCharacterId')
+    if isinstance(source_character_id, str):
+        source_character_id = source_character_id.strip()
+    selected_items = data.get('selectedItems') or []
+    targets = data.get('targets') or []
+    backup_requested = bool(data.get('backup'))
+
+    if not prefs_root or not os.path.isdir(prefs_root):
+        return jsonify({
+            "status": "error",
+            "message": "Invalid preferences root path provided.",
+        }), 400
+
+    if not source_account or source_character_id is None:
+        return jsonify({
+            "status": "error",
+            "message": "Source character information is missing.",
+        }), 400
+
+    if not selected_items:
+        return jsonify({
+            "status": "error",
+            "message": "No preference items selected for copying.",
+        }), 400
+
+    if not targets:
+        return jsonify({
+            "status": "error",
+            "message": "No destination characters selected.",
+        }), 400
+
+    invalid_items = [item_id for item_id in selected_items if item_id not in PREFERENCE_ITEM_MAP]
+    if invalid_items:
+        return jsonify({
+            "status": "error",
+            "message": f"Unknown preference items requested: {', '.join(invalid_items)}",
+        }), 400
+
+    source_folder_name = _character_folder_name(source_character_id)
+    if not source_folder_name:
+        return jsonify({
+            "status": "error",
+            "message": "Unable to resolve source character folder name.",
+        }), 400
+
+    source_char_path = os.path.join(prefs_root, source_account, source_folder_name)
+    if not os.path.isdir(source_char_path):
+        return jsonify({
+            "status": "error",
+            "message": f"Source character folder not found: {source_char_path}",
+        }), 400
+
+    overall_results = []
+    encountered_errors = False
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') if backup_requested else None
+
+    for target in targets:
+        target_account = (target.get('accountName') or '').strip()
+        target_character_id = target.get('characterId')
+        if isinstance(target_character_id, str):
+            target_character_id = target_character_id.strip()
+
+        result_entry = {
+            'targetAccount': target_account,
+            'targetCharacterId': target_character_id,
+            'copied': [],
+            'missing': [],
+            'backedUp': [],
+            'errors': [],
+        }
+
+        if not target_account or target_character_id is None:
+            result_entry['errors'].append('Incomplete target information provided.')
+            overall_results.append(result_entry)
+            encountered_errors = True
+            continue
+
+        target_folder_name = _character_folder_name(target_character_id)
+        if not target_folder_name:
+            result_entry['errors'].append('Unable to resolve target character folder name.')
+            overall_results.append(result_entry)
+            encountered_errors = True
+            continue
+
+        if target_account == source_account and str(target_character_id) == str(source_character_id):
+            result_entry['errors'].append('Source and target character are identical; skipping.')
+            overall_results.append(result_entry)
+            encountered_errors = True
+            continue
+
+        target_char_path = os.path.join(prefs_root, target_account, target_folder_name)
+        if not os.path.isdir(target_char_path):
+            result_entry['errors'].append(f'Target character folder not found: {target_char_path}')
+            overall_results.append(result_entry)
+            encountered_errors = True
+            continue
+
+        backup_root = None
+        if backup_requested:
+            backup_root = os.path.join(target_char_path, f"backup_{timestamp}")
+            os.makedirs(backup_root, exist_ok=True)
+
+        for item_id in selected_items:
+            item = PREFERENCE_ITEM_MAP[item_id]
+            matches = []
+
+            if item['type'] == 'directory':
+                src_path = os.path.join(source_char_path, item['pattern'])
+                if os.path.isdir(src_path):
+                    dest_path = os.path.join(target_char_path, item['pattern'])
+                    matches.append((src_path, dest_path))
+                else:
+                    result_entry['missing'].append(item['label'])
+                    continue
+            elif item['type'] == 'file':
+                src_path = os.path.join(source_char_path, item['pattern'])
+                if os.path.isfile(src_path):
+                    dest_path = os.path.join(target_char_path, item['pattern'])
+                    matches.append((src_path, dest_path))
+                else:
+                    result_entry['missing'].append(item['label'])
+                    continue
+            elif item['type'] == 'glob':
+                pattern = os.path.join(source_char_path, item['pattern'])
+                matched_paths = glob(pattern)
+                if matched_paths:
+                    for matched_path in matched_paths:
+                        relative = os.path.relpath(matched_path, source_char_path)
+                        dest_path = os.path.join(target_char_path, relative)
+                        matches.append((matched_path, dest_path))
+                else:
+                    result_entry['missing'].append(item['label'])
+                    continue
+
+            for src_path, dest_path in matches:
+                try:
+                    backup_relative = _backup_existing_path(dest_path, backup_root, target_char_path)
+                    if backup_relative:
+                        result_entry['backedUp'].append(backup_relative)
+                except Exception as backup_err:
+                    logger.error("Failed to backup %s: %s", dest_path, backup_err, exc_info=True)
+                    result_entry['errors'].append(
+                        f"Failed to backup {os.path.relpath(dest_path, target_char_path)}: {backup_err}"
+                    )
+                    encountered_errors = True
+                    continue
+
+                try:
+                    _copy_entry(src_path, dest_path)
+                    result_entry['copied'].append(os.path.relpath(dest_path, target_char_path))
+                except Exception as copy_err:
+                    logger.error(
+                        "Failed to copy %s to %s: %s",
+                        src_path,
+                        dest_path,
+                        copy_err,
+                        exc_info=True,
+                    )
+                    result_entry['errors'].append(
+                        f"Failed to copy {os.path.relpath(src_path, source_char_path)}: {copy_err}"
+                    )
+                    encountered_errors = True
+
+        overall_results.append(result_entry)
+
+    status = 'success' if not encountered_errors else 'partial_success'
+    message = (
+        'Preferences copied successfully.'
+        if status == 'success'
+        else 'Preferences copied with some warnings or errors. Review details.'
+    )
+
+    return jsonify({
+        "status": status,
+        "message": message,
+        "results": overall_results,
+    }), 200 if status == 'success' else 207
+
 
 if __name__ == '__main__':
     # Run the Flask app on all interfaces so it's reachable externally.
