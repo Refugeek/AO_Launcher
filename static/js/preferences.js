@@ -106,6 +106,9 @@ const preferenceItemsContainer = document.getElementById('preferenceItems');
 const targetAccountsContainer = document.getElementById('targetAccountsContainer');
 const selectAllTargetsBtn = document.getElementById('selectAllTargets');
 const clearAllTargetsBtn = document.getElementById('clearAllTargets');
+const selectAllPrefsBtn = document.getElementById('selectAllPrefs');
+const clearAllPrefsBtn = document.getElementById('clearAllPrefs');
+const defaultPrefsBtn = document.getElementById('defaultPrefs');
 const copyBtn = document.getElementById('copyBtn');
 const copyWithBackupBtn = document.getElementById('copyWithBackupBtn');
 const prefsMessageBox = document.getElementById('prefsMessageBox');
@@ -215,41 +218,31 @@ function renderPreferenceItems() {
 
     PREFERENCE_ITEMS.forEach(item => {
         const itemWrapper = document.createElement('label');
-        itemWrapper.className = 'preference-item flex items-start gap-2 cursor-pointer';
-        itemWrapper.title = item.description;
+        itemWrapper.className = 'preference-item flex items-center gap-2 cursor-pointer';
+        itemWrapper.title = item.description; // Keep description as tooltip
 
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.value = item.id;
         checkbox.checked = item.defaultChecked;
-        checkbox.className = 'mt-1 accent-[#4dd0d0]';
+        checkbox.className = 'accent-[#4dd0d0]';
 
         const textContainer = document.createElement('div');
-        textContainer.className = 'flex flex-col text-sm text-blue-100';
-
-        const labelLine = document.createElement('div');
-        labelLine.className = 'flex items-center gap-2';
+        textContainer.className = 'flex items-center gap-2 text-sm text-blue-100';
 
         const labelSpan = document.createElement('span');
         labelSpan.className = 'text-cyan-100 font-semibold';
         labelSpan.textContent = item.label;
 
-        labelLine.appendChild(labelSpan);
+        textContainer.appendChild(labelSpan);
         
         // Only add category badge if category is defined
         if (item.category) {
             const badge = document.createElement('span');
             badge.className = `preference-badge ${item.category === 'optional' ? 'preference-badge-optional' : 'preference-badge-recommended'}`;
             badge.textContent = item.category === 'optional' ? 'Optional' : 'Recommended';
-            labelLine.appendChild(badge);
+            textContainer.appendChild(badge);
         }
-
-        const description = document.createElement('span');
-        description.className = 'text-xs opacity-80';
-        description.textContent = item.description;
-
-        textContainer.appendChild(labelLine);
-        textContainer.appendChild(description);
 
         itemWrapper.appendChild(checkbox);
         itemWrapper.appendChild(textContainer);
@@ -332,7 +325,7 @@ function renderTargetAccounts() {
         header.appendChild(controls);
 
         const charactersContainer = document.createElement('div');
-        charactersContainer.className = 'space-y-1';
+        charactersContainer.className = 'space-y-0.5';  /* Reduced spacing between character items */
 
         const characters = [...account.characters].sort((a, b) => {
             const nameA = (a.name || '').toLowerCase();
@@ -373,18 +366,29 @@ function renderTargetAccounts() {
             });
 
             const text = document.createElement('div');
-            text.className = 'flex flex-col text-sm text-gray-100';
+            text.className = 'text-sm text-gray-100';
 
-            const nameLine = document.createElement('span');
-            nameLine.textContent = char.name || `Character ${char.id}`;
-
-            const metaLine = document.createElement('span');
-            metaLine.className = 'text-xs opacity-70';
-            metaLine.textContent = `ID: ${char.id}` + (isSource ? ' • Source character' : '');
+            // Put name and ID on same line
+            const nameLine = document.createElement('div');
+            nameLine.className = 'flex items-center gap-1';
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = char.name || `Character ${char.id}`;
+            nameLine.appendChild(nameSpan);
+            
+            const idSpan = document.createElement('span');
+            idSpan.className = 'text-xs opacity-70';
+            idSpan.textContent = `(ID: ${char.id})`;
+            nameLine.appendChild(idSpan);
+            
+            if (isSource) {
+                const sourceIndicator = document.createElement('span');
+                sourceIndicator.className = 'text-xs opacity-70 ml-1';
+                sourceIndicator.textContent = '• Source';
+                nameLine.appendChild(sourceIndicator);
+            }
 
             text.appendChild(nameLine);
-            text.appendChild(metaLine);
-
             characterRow.appendChild(checkbox);
             characterRow.appendChild(text);
 
@@ -426,6 +430,31 @@ function handleSelectAllTargets() {
 function handleClearAllTargets() {
     selectedTargets.clear();
     renderTargetAccounts();
+}
+
+function handleSelectAllPrefs() {
+    const checkboxes = preferenceItemsContainer.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+    });
+}
+
+function handleClearAllPrefs() {
+    const checkboxes = preferenceItemsContainer.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+}
+
+function handleDefaultPrefs() {
+    const checkboxes = preferenceItemsContainer.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        // Find the corresponding preference item and set checkbox to its default
+        const prefItem = PREFERENCE_ITEMS.find(item => item.id === checkbox.value);
+        if (prefItem) {
+            checkbox.checked = prefItem.defaultChecked;
+        }
+    });
 }
 
 function getSelectedPreferenceItems() {
@@ -679,6 +708,9 @@ function initialiseEventHandlers() {
 
     selectAllTargetsBtn.addEventListener('click', handleSelectAllTargets);
     clearAllTargetsBtn.addEventListener('click', handleClearAllTargets);
+    selectAllPrefsBtn.addEventListener('click', handleSelectAllPrefs);
+    clearAllPrefsBtn.addEventListener('click', handleClearAllPrefs);
+    defaultPrefsBtn.addEventListener('click', handleDefaultPrefs);
 
     copyBtn.addEventListener('click', () => handleCopyPreferences(false));
     copyWithBackupBtn.addEventListener('click', () => handleCopyPreferences(true));
