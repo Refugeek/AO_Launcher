@@ -592,3 +592,57 @@ button {
 .account-card .flex.space-x-2 > button:first-child {
     margin-left: 0;
 }
+
+/* Preference copier specific styling */
+.preference-item {
+    background-color: #0a1118;
+    border: 1px solid #1a3d3d;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.preference-item:hover {
+    border-color: #4dd0d0;
+    box-shadow: 0 0 10px rgba(77, 208, 208, 0.15);
+}
+
+.preference-badge {
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    padding: 0.1rem 0.35rem;
+    border-radius: 9999px;
+    text-transform: uppercase;
+}
+
+.preference-badge-recommended {
+    background-color: rgba(77, 208, 208, 0.15);
+    border: 1px solid rgba(77, 208, 208, 0.35);
+    color: #4dd0d0;
+}
+
+.preference-badge-optional {
+    background-color: rgba(208, 160, 77, 0.15);
+    border: 1px solid rgba(208, 160, 77, 0.35);
+    color: #d0a04d;
+}
+
+.preference-account-card {
+    min-height: 100%;
+}
+
+.preference-character-row {
+    border: 1px solid #1a3333;
+    border-radius: 0.35rem;
+    padding: 0.5rem;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.preference-character-row:hover {
+    border-color: #2a4d4d;
+    background-color: #0f1f1f;
+}
+
+.preference-character-disabled {
+    opacity: 0.4;
+}

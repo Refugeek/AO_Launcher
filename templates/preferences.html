@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AO Launcher – Preference Copier</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="font-inter min-h-screen flex flex-col items-center p-3">
+    <div class="w-full max-w-5xl mb-2">
+        <div class="flex justify-between text-xs text-cyan-300">
+            <a href="{{ url_for('index') }}" class="hover:underline tracking-wide">&#8592; Back to Launcher</a>
+            <span class="opacity-75">Preference Copier</span>
+        </div>
+    </div>
+    <div class="container mx-auto p-4 rounded-lg shadow-xl max-w-5xl w-full space-y-4">
+        <header class="space-y-1">
+            <h1 class="text-2xl font-semibold text-cyan-300">Character Preference Copier</h1>
+            <p class="text-sm text-blue-100">Quickly copy recommended Anarchy Online preference files between characters while keeping backups when needed.</p>
+        </header>
+
+        <section class="bg-slate-900/40 border border-cyan-900/40 rounded-lg p-3 space-y-2">
+            <h2 class="text-lg font-semibold text-cyan-200">Preference Base Folder</h2>
+            <p class="text-xs text-blue-100">Set the path to your <span class="font-mono">Prefs</span> directory (e.g. <span class="font-mono">C:\Users\&lt;you&gt;\AppData\Local\Funcom\Anarchy Online\&lt;profile&gt;\Anarchy Online\Prefs</span>).</p>
+            <div class="flex flex-col md:flex-row gap-2">
+                <input type="text" id="prefsBasePath" class="flex-1 shadow appearance-none border rounded-lg py-2 px-2 leading-tight focus:outline-none focus:shadow-outline" placeholder="C:\\Users\\<you>\\AppData\\Local\\Funcom\\Anarchy Online\\...\\Prefs">
+                <button id="savePrefsBasePathBtn" class="px-4 py-2 rounded-lg uppercase">Save Path</button>
+            </div>
+        </section>
+
+        <section class="bg-slate-900/40 border border-cyan-900/40 rounded-lg p-3 space-y-3">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div class="flex-1">
+                    <label for="sourceCharacter" class="block text-lg font-semibold text-cyan-200">Copy from Character</label>
+                    <select id="sourceCharacter" class="w-full mt-1 bg-transparent border border-cyan-900/60 rounded-lg px-2 py-2 focus:outline-none focus:ring focus:ring-cyan-500">
+                        <option value="">Select a character</option>
+                    </select>
+                </div>
+                <div class="flex flex-col text-xs text-blue-100 space-y-1">
+                    <span class="font-semibold text-cyan-200">What gets copied?</span>
+                    <span>Hover over an item below to learn what data it contains.</span>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-md font-semibold text-cyan-200 mb-1">Preference Items</h3>
+                <div id="preferenceItems" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+            </div>
+        </section>
+
+        <section class="bg-slate-900/40 border border-cyan-900/40 rounded-lg p-3 space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                    <h2 class="text-lg font-semibold text-cyan-200">Select Target Characters</h2>
+                    <p class="text-xs text-blue-100">Choose any characters that should receive the copied preferences.</p>
+                </div>
+                <div class="flex gap-2 text-xs">
+                    <button id="selectAllTargets" class="px-3 py-1 rounded-md uppercase">Select All</button>
+                    <button id="clearAllTargets" class="px-3 py-1 rounded-md uppercase">Select None</button>
+                </div>
+            </div>
+            <div id="targetAccountsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+        </section>
+
+        <section class="flex flex-col sm:flex-row gap-3 justify-end">
+            <button id="copyWithBackupBtn" class="px-4 py-3 rounded-lg uppercase">Copy with Backup</button>
+            <button id="copyBtn" class="px-4 py-3 rounded-lg uppercase">Copy Preferences</button>
+        </section>
+
+        <div id="prefsMessageBox" class="mt-2 p-3 rounded-lg text-center hidden"></div>
+    </div>
+
+    <script src="/static/js/preferences.js"></script>
+</body>
+</html>
