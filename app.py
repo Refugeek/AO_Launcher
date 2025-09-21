@@ -737,6 +737,143 @@ def copy_preferences():
         "invalidItems": invalid_items
     }), 200
 
+
+@app.route('/delete_shortcutbar_settings', methods=['POST'])
+def delete_shortcutbar_settings():
+    """Delete shortcutbar settings for selected characters."""
+    if platform.system() != 'Windows':
+        logger.warning("Shortcutbar deletion requested on unsupported platform")
+        return jsonify({
+            "status": "unsupported",
+            "message": "Shortcutbar deletion is only supported on Windows"
+        }), 200
+
+    data = request.json or {}
+
+    base_path = (data.get('prefsBasePath') or '').strip()
+    targets_info = data.get('targets') or []
+    create_backup = bool(data.get('createBackup'))
+
+    if not base_path:
+        return jsonify({
+            "status": "error",
+            "message": "Preference base path is required"
+        }), 400
+
+    if not os.path.isdir(base_path):
+        return jsonify({
+            "status": "error",
+            "message": f"Preference base path does not exist: {base_path}"
+        }), 400
+
+    if not isinstance(targets_info, list) or len(targets_info) == 0:
+        return jsonify({
+            "status": "error",
+            "message": "At least one character must be selected"
+        }), 400
+
+    logger.info(
+        "Deleting shortcutbar settings for %d target(s)",
+        len(targets_info)
+    )
+
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    results = []
+    errors = []
+
+    for target in targets_info:
+        target_account = (target.get('accountName') or '').strip()
+        target_character_id = target.get('characterId')
+
+        if not target_account or target_character_id is None or target_character_id == '':
+            error_msg = "Target account and character must be provided"
+            errors.append(error_msg)
+            logger.error(error_msg)
+            continue
+
+        target_dir = _get_character_prefs_path(base_path, target_account, target_character_id)
+        if not target_dir:
+            error_msg = f"Unable to determine target directory for {target_account}/{target_character_id}"
+            errors.append(error_msg)
+            logger.error(error_msg)
+            continue
+
+        if not os.path.isdir(target_dir):
+            error_msg = f"Target character preferences not found at {target_dir}"
+            errors.append(error_msg)
+            logger.error(error_msg)
+            continue
+
+        # Setup backup if requested
+        backup_dir = None
+        if create_backup:
+            backup_root = os.path.join(
+                target_dir,
+                f"Backup_{timestamp}"
+            )
+            os.makedirs(backup_root, exist_ok=True)
+            backup_dir = backup_root
+
+        try:
+            # Find all shortcutbar files
+            shortcut_path_pattern = os.path.join(target_dir, "Containers", "ShortcutBar*.xml")
+            shortcut_files = glob(shortcut_path_pattern)
+            
+            if not shortcut_files:
+                logger.info(f"No shortcutbar files found for {target_account}/{target_character_id}")
+                results.append({
+                    "accountName": target_account,
+                    "characterId": target_character_id,
+                    "status": "success",
+                    "message": "No shortcutbar files found"
+                })
+                continue
+                
+            for file_path in shortcut_files:
+                # Backup file if requested
+                if backup_dir:
+                    rel_path = os.path.relpath(file_path, target_dir)
+                    backup_path = os.path.join(backup_dir, rel_path)
+                    os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+                    shutil.copy2(file_path, backup_path)
+                    
+                # Delete the file
+                os.remove(file_path)
+                
+            results.append({
+                "accountName": target_account,
+                "characterId": target_character_id,
+                "status": "success",
+                "message": f"Deleted {len(shortcut_files)} shortcutbar files" + 
+                          (f" with backup in {os.path.basename(backup_dir)}" if backup_dir else "")
+            })
+            
+        except Exception as e:
+            error_msg = f"Error deleting shortcutbar settings for {target_account}/{target_character_id}: {str(e)}"
+            errors.append(error_msg)
+            logger.exception(error_msg)
+            results.append({
+                "accountName": target_account,
+                "characterId": target_character_id,
+                "status": "error",
+                "message": f"Error: {str(e)}"
+            })
+
+    status = "success"
+    message = f"Successfully deleted shortcutbar settings for {len(results)} characters"
+    
+    if len(errors) > 0:
+        status = "partial_success" if len(results) > 0 else "error"
+        message = f"Encountered {len(errors)} errors while deleting shortcutbar settings"
+
+    return jsonify({
+        "status": status,
+        "message": message,
+        "results": results,
+        "errors": errors
+    })
+
+
 if __name__ == '__main__':
     # Run the Flask app on all interfaces so it's reachable externally.
     # Set debug=False for production and secure your app appropriately.

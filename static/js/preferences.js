@@ -537,6 +537,116 @@ async function handleCopyPreferences(createBackup) {
     }
 }
 
+function showConfirmationDialog(message, onConfirm) {
+    // Create modal background
+    const modalBackdrop = document.createElement('div');
+    modalBackdrop.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    
+    // Create modal content
+    const modalContent = document.createElement('div');
+    modalContent.className = 'bg-slate-800 border border-cyan-900 rounded-lg p-5 max-w-md w-full shadow-xl';
+    
+    // Create message
+    const messageElement = document.createElement('p');
+    messageElement.className = 'text-blue-100 mb-5';
+    messageElement.textContent = message;
+    
+    // Create buttons container
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.className = 'flex justify-end gap-3';
+    
+    // Cancel button
+    const cancelButton = document.createElement('button');
+    cancelButton.className = 'px-4 py-2 rounded-lg uppercase';
+    cancelButton.textContent = 'Cancel';
+    cancelButton.addEventListener('click', () => {
+        document.body.removeChild(modalBackdrop);
+    });
+    
+    // Confirm button
+    const confirmButton = document.createElement('button');
+    confirmButton.className = 'px-4 py-2 rounded-lg uppercase bg-red-700 hover:bg-red-600 text-white';
+    confirmButton.textContent = 'Delete';
+    confirmButton.addEventListener('click', () => {
+        document.body.removeChild(modalBackdrop);
+        onConfirm();
+    });
+    
+    // Assemble modal
+    buttonsContainer.appendChild(cancelButton);
+    buttonsContainer.appendChild(confirmButton);
+    modalContent.appendChild(messageElement);
+    modalContent.appendChild(buttonsContainer);
+    modalBackdrop.appendChild(modalContent);
+    
+    // Add to body
+    document.body.appendChild(modalBackdrop);
+}
+
+async function handleDeleteShortcutbars(createBackup = true) {
+    if (selectedTargets.size === 0) {
+        showPrefsMessage('Please select at least one target character.', 'warning');
+        return;
+    }
+    
+    if (!appSettings.prefsBasePath) {
+        showPrefsMessage('Please set the preferences base path first.', 'warning');
+        return;
+    }
+    
+    const deleteShortcutbarsBtn = document.getElementById('deleteShortcutbarsBtn');
+    deleteShortcutbarsBtn.disabled = true;
+    
+    const targets = [...selectedTargets]
+        .map(key => characterLookup.get(key))
+        .filter(char => !!char)
+        .map(({ accountName, characterId }) => ({ accountName, characterId }));
+    
+    const payload = {
+        prefsBasePath: appSettings.prefsBasePath,
+        targets: targets,
+        createBackup: createBackup
+    };
+    
+    showPrefsMessage('Deleting shortcutbar settings…', 'info');
+    
+    try {
+        const response = await fetch('/delete_shortcutbar_settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        const result = await response.json();
+        console.log('Shortcutbar deletion result', result);
+        
+        if (!response.ok || result.status === 'error') {
+            const message = result.message || 'Deletion failed.';
+            showPrefsMessage(message, 'error');
+            return;
+        }
+        
+        if (result.status === 'unsupported') {
+            showPrefsMessage(result.message || 'Shortcutbar deletion is only supported on Windows.', 'warning');
+            return;
+        }
+        
+        const message = result.message || (createBackup ? 'Shortcutbar settings deleted with backups.' : 'Shortcutbar settings deleted.');
+        const type = result.status === 'partial_success' ? 'warning' : 'success';
+        const detailedMessage = result.errors && result.errors.length
+            ? `${message} ${result.errors[0]}`
+            : message;
+        showPrefsMessage(detailedMessage, type);
+    } catch (error) {
+        console.error('Error deleting shortcutbar settings', error);
+        showPrefsMessage('An unexpected error occurred while deleting shortcutbar settings.', 'error');
+    } finally {
+        deleteShortcutbarsBtn.disabled = false;
+    }
+}
+
 function initialiseEventHandlers() {
     savePrefsBasePathBtn.addEventListener('click', () => {
         const path = prefsBasePathInput.value.trim();
@@ -572,6 +682,17 @@ function initialiseEventHandlers() {
 
     copyBtn.addEventListener('click', () => handleCopyPreferences(false));
     copyWithBackupBtn.addEventListener('click', () => handleCopyPreferences(true));
+    
+    const deleteShortcutbarsBtn = document.getElementById('deleteShortcutbarsBtn');
+    if (deleteShortcutbarsBtn) {
+        deleteShortcutbarsBtn.addEventListener('click', () => {
+            // Show confirmation dialog
+            showConfirmationDialog(
+                'WARNING: This will permanently delete all shortcutbar settings for the selected characters. This action cannot be undone. Do you want to proceed?',
+                () => handleDeleteShortcutbars(true) // Always create backup when deleting
+            );
+        });
+    }
 }
 
 function initialise() {

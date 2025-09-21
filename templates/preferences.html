@@ -65,9 +65,12 @@
             <div id="targetAccountsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
         </section>
 
-        <section class="flex flex-col sm:flex-row gap-3 justify-end">
-            <button id="copyWithBackupBtn" class="px-4 py-3 rounded-lg uppercase">Copy with Backup</button>
-            <button id="copyBtn" class="px-4 py-3 rounded-lg uppercase">Copy Preferences</button>
+        <section class="flex flex-col sm:flex-row gap-3 justify-between">
+            <button id="deleteShortcutbarsBtn" class="px-4 py-3 rounded-lg uppercase bg-red-700 hover:bg-red-600 text-white">Delete Shortcutbars</button>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button id="copyWithBackupBtn" class="px-4 py-3 rounded-lg uppercase">Copy with Backup</button>
+                <button id="copyBtn" class="px-4 py-3 rounded-lg uppercase">Copy Preferences</button>
+            </div>
         </section>
 
         <div id="prefsMessageBox" class="mt-2 p-3 rounded-lg text-center hidden"></div>
